@@ -159,3 +159,19 @@ function Repair-DependencyRecords {
 - U 盘根目录铺开的便携文件 + 启动器（`.cmd`/`.ps1`）。
 - 源副本（如 `E:\workbuddy移动版\`）用于后续维护与重同步。
 - 一份简短 README 说明：双击启动、勿点升级、升级回本机重同步。
+
+## 10. 应用专属坑：网络代理
+- 桌面应用若把网络代理设为"使用系统代理/System"（如 WorkBuddy 的
+  `codingcopilot.httpProxySettings: "system"`），便携版插到**没有该代理的其它电脑**会断网——
+  它去读那台机器的系统代理，不存在/异常即失败。本机有代理所以正常，易误判。
+- 便携化**务必检查应用配置里的代理设置**，改成显式"不使用代理/No Proxy"。
+  WorkBuddy 取值为 `"none"`（程序内 `k.proxyMode.none → "No Proxy"`；枚举还有
+  `system`/`manual`/`disable`）。
+- 常见存放位置：VSCode 系 `Roaming\<AppName>\User\settings.json`（键如 `http.proxy` /
+  `*.httpProxySettings`）、Electron `Preferences` / `Local State`。搜配置键 `"proxy"` 而非日志。
+- 排查技巧：先全盘搜 `socks5://`、`--proxy-server`、显式 `http://IP:端口` 确认有无**硬编码**
+  代理地址；若只有 `"system"`，改 `"none"` 即可强制直连。
+- 权衡：改 `"none"` 后，本机若网络必须走代理才能出网，则本机用便携版也会直连、可能连不上；
+  但在无代理的其它电脑上即可正常联网（便携的核心诉求）。
+- 改完后**同步更新源副本**（如 `E:\workbuddy移动版\...settings.json`），防止以后
+  `同步安装.cmd` 把旧的 `"system"` 回灌进 U 盘。
