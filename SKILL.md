@@ -175,3 +175,21 @@ function Repair-DependencyRecords {
   但在无代理的其它电脑上即可正常联网（便携的核心诉求）。
 - 改完后**同步更新源副本**（如 `E:\workbuddy移动版\...settings.json`），防止以后
   `同步安装.cmd` 把旧的 `"system"` 回灌进 U 盘。
+
+## 11. 数据归属与 skills 同步（易踩的"装了 skill 带不走"）
+- **核心机制是 NTFS junction，不是拷贝**。用启动器启动时，本机路径（`~/.workbuddy`、
+  `AppData\Roaming\WorkBuddy`、`AppData\Local\WorkBuddy` 等5处）被建为指向 U盘 `Data\...`
+  的目录联接。**应用读写这些路径时物理落在 U盘**，不会留在本机。
+- 用户误以为"运行后把配置拷贝到本机、装的 skill 落本地"——只有在**直接双击 exe 而不用
+  启动器**时才成立（此时本机真实目录生效，skill 落那台电脑，U盘没有）。
+- 用法铁律：**U盘版必须双击 `启动WorkBuddy.cmd`，绝不直接双击 `WorkBuddy.exe`**。
+- 真实风险：① 直接双击 exe → skill 落本机；② 日常使用的本机账号（如主开发机 rabbit）
+  的 `~/.workbuddy` 是独立真实目录，装的 skill 不会自动进 U盘（两套数据）。
+- 加固做法（已在本项目实现）：
+  - `launch.ps1` 启动环节加"抢救合并"：若发现本机已有真实 `.workbuddy`（即之前误双击 exe
+    装过 skill），先 `robocopy /E` 把本机 `skills` 增量并入 U盘，再 `.bak`+建 junction，避免丢失。
+  - 提供 `merge-skills.cmd`（→ `merge-skills.ps1`）：双向增量合并 **本机 ↔ U盘** 的
+    `skills`（`/E` 不删任一端已有，同名以 mtime 较新者胜）。无论在哪边装都能聚合带走。
+  - 脚本放 U盘根 + 源副本各一份，按钮即用。
+- 现场验证手法：对比 U盘 `Data\.workbuddy\skills` 与本机 `~/.workbuddy\skills` 的差异
+  （`diff <(ls A|sort) <(ls B|sort)`），以及本机目录是否 junction（`fsutil reparsepoint query`）。
