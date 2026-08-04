@@ -1,0 +1,4 @@
+interface:
+  display_name: "USB 便携版改造"
+  short_description: "把 Windows 桌面应用改造成可移动 U 盘便携版"
+  default_prompt: "Use $usb-portable-app to turn a Windows desktop app into a drive-letter-independent USB portable build."
