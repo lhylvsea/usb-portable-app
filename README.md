@@ -1,7 +1,7 @@
 # usb-portable-app
 
-把安装在 Windows 上的桌面应用（Electron/Chromium 架构，如 WorkBuddy、VS Code、Slack、
-Discord、Figma 等）改造为 **U 盘绿色便携版** 的 WorkBuddy Skill。
+把安装在 Windows 上的桌面应用（Electron/Chromium 架构，如 OpenAI Codex/ChatGPT、WorkBuddy、
+VS Code、Slack、Discord、Figma 等）改造为 **U 盘绿色便携版** 的可复用 Skill。
 
 ## 解决什么问题
 
@@ -24,7 +24,13 @@ Discord、Figma 等）改造为 **U 盘绿色便携版** 的 WorkBuddy Skill。
 
 ## 安装
 
-把本仓库整个文件夹复制到 WorkBuddy 的用户级 skills 目录：
+把本仓库整个文件夹复制到目标 Agent 的用户级 skills 目录。Codex 使用：
+
+```
+C:\Users\<user>\.codex\skills\usb-portable-app\
+```
+
+WorkBuddy 使用：
 
 ```
 ~/.workbuddy/skills/usb-portable-app/
@@ -34,9 +40,13 @@ Discord、Figma 等）改造为 **U 盘绿色便携版** 的 WorkBuddy Skill。
 
 ## 使用
 
-在 WorkBuddy 对话中说类似：
+在 Codex 或 WorkBuddy 对话中说类似：
 
 > 把 WorkBuddy 改成 U 盘绿色便携版，插任意电脑都能跑
+
+或：
+
+> 把 Codex/ChatGPT 桌面版改成 U 盘便携版，配置和新增 Skill 跟着 U 盘走
 
 Skill 会引导你完成：发现落盘点 → 复制到 U 盘 → 建 junction → 写盘符无关启动器
 （`%~dp0` 动态取目录，纯 ASCII `.cmd` 无 BOM）→ 注入自愈逻辑 → 同步/升级策略。
@@ -45,6 +55,11 @@ Skill 会引导你完成：发现落盘点 → 复制到 U 盘 → 建 junction 
 
 - `SKILL.md` — 完整工作流、编码规范、沙箱坑、验证清单
 - `references/launch_template.ps1` — 可改写的启动器模板（含 `Repair-DependencyRecords`、junction 建立、启动 exe）
+- `references/codex-portable.md` — OpenAI Codex/ChatGPT 桌面版的目录、环境变量、双向同步和验收约定
+- `references/codex-launcher.cmd` — 盘符无关的 Codex 启动器模板
+- `scripts/sync-codex-profile.ps1` — Codex 配置/Skills 本机↔U 盘双向增量同步
+- `scripts/prepare-codex-portable.ps1` — Codex 便携路径重写与换盘处理
+- `scripts/Repair-DependencyRecords.ps1` — vendor `.extracted` SHA-256 自检自愈
 
 ## 注意
 

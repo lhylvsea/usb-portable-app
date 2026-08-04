@@ -1,13 +1,6 @@
 ---
 name: usb-portable-app
-description: >
-  把安装在 Windows 上的桌面应用（尤其 Electron/Chromium 架构，如 WorkBuddy、VS Code、
-  Slack、Discord、Figma 等）改造为 U 盘绿色便携版：用户配置、登录态、依赖(vendor)全部写入
-  U 盘而非本机，插任意 Win 电脑双击即可运行。核心技术是 NTFS 目录联接(junction)在文件系统层
-  重定向应用的数据落盘点，并内置依赖记录(.extracted)自检自愈逻辑，防止"环境准备中"无限循环。
-  触发词："改成 U 盘版/绿色版/便携版"、"插任意电脑运行"、"配置放当前目录"、"make X portable"、
-  "把 WorkBuddy 装到 U 盘"。不适用于纯绿色单文件 exe（直接拷贝即可，无需本 skill）。
-agent_created: true
+description: '把 Windows 桌面应用（尤其 Electron/Chromium、WorkBuddy、VS Code、Slack、Discord、Figma，以及 OpenAI Codex/ChatGPT）改造成 U 盘绿色便携版：通过盘符无关启动器重定向 USERPROFILE、CODEX_HOME、APPDATA、LOCALAPPDATA，必要时使用 NTFS junction，将配置、登录态、Skills、插件和 vendor 依赖保留在 U 盘，并用 .extracted 的 SHA-256 自检自愈防止环境准备死循环。适用于触发词：改成 U 盘版、绿色版、便携版、插任意电脑运行、配置放当前目录、把 WorkBuddy 装到 U 盘、把 Codex 放进 U 盘、Codex 便携版、同步 .codex Skills。纯绿色单文件 exe 不需要本 skill。'
 ---
 
 # USB 便携版改造（桌面应用）
@@ -58,7 +51,7 @@ tar -cf - -C "/c/Users/rabbit/AppData/Roaming/WorkBuddy" . | tar -xf - -C "/h/Da
 在本机/目标机的**标准位置**建目录联接，指向 U 盘副本。本机仅留指针，数据在 U 盘。
 ```powershell
 # 例：把 home 下的 .workbuddy 重定向到 U 盘
-$src = "C:\Users\rabbit\.workbuddy"          # 标准位置(本机)
+$src = "C:\Users\<user>\.workbuddy"          # 标准位置(本机)
 $dst = "H:\Data\.workbuddy"                  # U盘副本
 if (Test-Path $src) {
     if ((Get-Item $src).LinkType -ne 'Junction') {
@@ -200,3 +193,37 @@ function Repair-DependencyRecords {
 - 现场验证手法：对比 U盘 `Data\.workbuddy` 与本机 `~/.workbuddy` 的顶层差异
   （`diff <(ls A|sort) <(ls B|sort)`），以及本机目录是否 junction（`fsutil reparsepoint query`）/
   启动后是否真实写入 U盘（看 U盘 `.workbuddy` 是否出现新文件夹/新 md）。
+
+## 12. OpenAI Codex / ChatGPT 桌面版变体
+
+当目标是 `app\ChatGPT.exe`，优先使用环境变量重定向；只有实测仍写入本机标准目录时，才对相应目录使用 NTFS junction。
+
+### 四个真实应用场景
+
+1. 把 `C:\Codex` 的 ChatGPT 桌面版封装为 U 盘绿色版，插到任意 Windows 电脑后双击启动。
+2. 本机安装新 Codex Skill 后，把 `.codex\skills`、`.agents\skills` 和配置增量带到 U 盘。
+3. 外出用 U 盘安装 Skill 或修改 `AGENTS.md`/`config.toml`，回本机后双向合并。
+4. U 盘盘符从 `E:` 变为 `H:`/`X:` 后，自动重写配置中的旧盘符，并在启动前修复 vendor `.extracted` 记录。
+
+### 中文使用说明：Codex 固定流程
+
+1. 复制完整 `app` 目录，不只复制 `ChatGPT.exe`；保留 `resources`、DLL 和 vendor 文件。
+2. 用 `references/codex-launcher.cmd` 的 `%~dp0` 方式生成启动器，把 `USERPROFILE`、`HOME`、`CODEX_HOME`、`APPDATA`、`LOCALAPPDATA`、XDG、Git、npm、pip、uv、Cargo 等变量指向 `data\profile`。
+3. 启动前运行 `scripts/prepare-codex-portable.ps1`，按当前根目录重写文本路径；不要把 `E:`、`H:` 或用户目录写死。
+4. 把 `scripts/sync-codex-profile.ps1` 放在便携版的 `portable` 目录。退出所有 Codex 进程后运行 `-Mode Preview`，确认计划，再运行 `-Mode Sync`。它按文件时间双向增量同步，缺失文件两边补齐，不删除文件；SQLite/WAL、日志和缓存跳过。
+5. 在启动器调用 `scripts/Repair-DependencyRecords.ps1`（或把其逻辑嵌入启动器），用 vendor zip 的 SHA-256 校验 `.extracted`；错配只删除记录，让应用重新解压，健康记录不改动。
+6. 升级回本机完成：准备完整新版本目录，再复制到 U 盘；不要在 U 盘运行中的副本里直接更新应用本体。
+
+### 资源
+
+- `scripts/sync-codex-profile.ps1`：Codex 本机↔U 盘双向同步模板。
+- `scripts/prepare-codex-portable.ps1`：盘符变化和配置路径重写模板。
+- `scripts/Repair-DependencyRecords.ps1`：vendor `.extracted` 自检、自愈脚本。
+- `references/codex-launcher.cmd`：盘符无关、纯 ASCII 的 Codex 启动器模板。
+
+### Codex 专属边界
+
+- 便携版必须通过启动器运行；直接双击 `app\ChatGPT.exe` 会绕过重定向，Skill 可能落到当前电脑。
+- 首次双向同步前必须退出本机版和便携版 Codex；`-AllowRunning` 只用于隔离测试，不用于真实资料同步。
+- OAuth、浏览器 Cookie、系统代理、Office/Git/Python/显卡等仍可能受目标电脑环境和 Windows DPAPI 限制。
+- 此流程是显式一键同步，不是后台实时监控；拔盘前先同步、退出 Codex，再安全弹出。
