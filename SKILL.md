@@ -186,10 +186,17 @@ function Repair-DependencyRecords {
 - 真实风险：① 直接双击 exe → skill 落本机；② 日常使用的本机账号（如主开发机 rabbit）
   的 `~/.workbuddy` 是独立真实目录，装的 skill 不会自动进 U盘（两套数据）。
 - 加固做法（已在本项目实现）：
-  - `launch.ps1` 启动环节加"抢救合并"：若发现本机已有真实 `.workbuddy`（即之前误双击 exe
-    装过 skill），先 `robocopy /E` 把本机 `skills` 增量并入 U盘，再 `.bak`+建 junction，避免丢失。
-  - 提供 `merge-skills.cmd`（→ `merge-skills.ps1`）：双向增量合并 **本机 ↔ U盘** 的
-    `skills`（`/E` 不删任一端已有，同名以 mtime 较新者胜）。无论在哪边装都能聚合带走。
+  - `launch.ps1` 启动环节加"抢救合并"：若发现本机已有真实 `.workbuddy` 或 `Roaming\WorkBuddy`
+    （即之前误双击 exe 装过 skill / 写过 md / 建过文件夹 / 改过设置），先 `robocopy /E`
+    把整个**用户内容树**增量并入 U盘，再 `.bak`+建 junction，避免丢失。
+    （只合并用户内容：`~/.workbuddy` 整树 + `Roaming\WorkBuddy`；跳过 `Local\WorkBuddy`/
+    `*Extension` 缓存目录，它们可重生。）
+  - 提供 `merge-portable.cmd`（→ `merge-portable.ps1`）：双向增量合并 **本机 ↔ U盘** 的
+    **全部用户数据**——`~/.workbuddy` 整树（skills / memory 的 md / 新建文件夹 /
+    IDENTITY·SOUL·USER·MEMORY 等）+ `Roaming\WorkBuddy`（设置如 settings.json、登录态）。
+    `/E` 不删任一端已有，同名以 mtime 较新者胜。无论在哪边装/写都能聚合带走。
+    （旧版 `merge-skills.*` 只合并 skills，已弃用并删除。）
   - 脚本放 U盘根 + 源副本各一份，按钮即用。
-- 现场验证手法：对比 U盘 `Data\.workbuddy\skills` 与本机 `~/.workbuddy\skills` 的差异
-  （`diff <(ls A|sort) <(ls B|sort)`），以及本机目录是否 junction（`fsutil reparsepoint query`）。
+- 现场验证手法：对比 U盘 `Data\.workbuddy` 与本机 `~/.workbuddy` 的顶层差异
+  （`diff <(ls A|sort) <(ls B|sort)`），以及本机目录是否 junction（`fsutil reparsepoint query`）/
+  启动后是否真实写入 U盘（看 U盘 `.workbuddy` 是否出现新文件夹/新 md）。

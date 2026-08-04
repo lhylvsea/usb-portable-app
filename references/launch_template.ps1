@@ -52,7 +52,16 @@ foreach ($src in $maps.Keys) {
             if ($it.Target -and $it.Target[0] -eq $dst) { continue }
             cmd /c "rmdir /q `"$src`"" 2>$null
         } else {
-            # 真实目录：备份到 .bak，避免覆盖本机数据
+            # 真实目录（之前误直接启动过 exe，用户数据落在了本机）：
+            # 先整体增量并入 U盘(/E 不删任一端)，避免 skill/md/新文件夹/设置随盘拔走而丢失。
+            # 只合并用户内容(home 与 Roaming)，跳过 Local/Extension 缓存。
+            $isUserContent = ($src -like '*.workbuddy') -or ($dst -like '*\AppData\Roaming\*')
+            if ($isUserContent) {
+                if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+                robocopy $src $dst /E /R:1 /W:1 /NFL /NDL | Out-Null
+                Write-Host "[rescue] 本机 -> U盘(整树增量): $src"
+            }
+            # 备份到 .bak，避免覆盖本机数据
             Move-Item $src ($src + '.bak') -Force -ErrorAction SilentlyContinue
         }
     }
