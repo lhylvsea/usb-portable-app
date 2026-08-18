@@ -44,7 +44,7 @@ H:\
  ├─ 启动<AppName>.cmd      # 纯 ASCII，无 BOM
  ├─ launch.ps1            # ASCII 文件名 + UTF-8 BOM
  ├─ restore.ps1           # 还原本机联接
- ├─ sync.ps1              # 用 /MIR 从参考机重同步 Data
+ ├─ sync.ps1              # 从参考机程序目录 /MIR 重同步 U盘\WorkBuddy(不含 Data)
  └─ README.txt
 ```
 复制技巧（避开 Git Bash 路径转换坑）：
@@ -133,8 +133,13 @@ function Repair-DependencyRecords {
 > MATCH=True，node 同结构。仅当记录漂移（如半截自动更新）才触发删除重建。
 
 ## 6. 同步与升级
-- `sync.ps1` 用 `robocopy <参考机源> <U盘Data> /MIR`（PowerShell 内调用，避开 Git Bash 路径转换）。
-  首次同步前校验源含 `resources`，避免空同步清空 U 盘。
+- `sync.ps1` 用 `robocopy <参考机程序目录> <U盘\WorkBuddy> /MIR`（PowerShell 内调用，避开 Git Bash 路径转换），
+  **只同步程序文件，绝不碰 Data 目录**（用户数据以 U 盘为真相来源）。
+  同步前校验源含 `resources`，避免空同步清空 U 盘程序。
+- **自动定位安装目录**：内置候选路径（LOCALAPPDATA\Programs、AppData\Local\Programs、C:/D: 的
+  Program Files / (x86)），并**全盘扫描所有磁盘**的 Program Files 下 WorkBuddy；收集所有存在的 exe
+  后**选修改时间最新者**作为源。这样升级后安装目录迁移（如从 `C:\Users\...\AppData\Local\Programs`
+  迁到 `D:\Program Files`）能自动识别，且不会被残留的旧版目录误导。
 - **便携版内严禁点"升级/更新"**：会自动改写 U 盘 exe 与 vendor 哈希，再次触发重解压循环。
   要升级 → 回本机做 → 再用 `同步安装.cmd`（即 sync.ps1）重同步到 U 盘。
 
