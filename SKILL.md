@@ -44,7 +44,7 @@ H:\
  ├─ 启动<AppName>.cmd      # 纯 ASCII，无 BOM
  ├─ launch.ps1            # ASCII 文件名 + UTF-8 BOM
  ├─ restore.ps1           # 还原本机联接
- ├─ sync.ps1              # 从参考机程序目录 /MIR 重同步 U盘\WorkBuddy(不含 Data)
+ ├─ sync.ps1              # 从参考机程序目录 /MIR 重同步 U盘\WorkBuddy(不含 Data)；支持 -Silent 供自举调用
  └─ README.txt
 ```
 复制技巧（避开 Git Bash 路径转换坑）：
@@ -142,6 +142,24 @@ function Repair-DependencyRecords {
   迁到 `D:\Program Files`）能自动识别，且不会被残留的旧版目录误导。
 - **便携版内严禁点"升级/更新"**：会自动改写 U 盘 exe 与 vendor 哈希，再次触发重解压循环。
   要升级 → 回本机做 → 再用 `同步安装.cmd`（即 sync.ps1）重同步到 U 盘。
+
+## 6.1 空 U 盘自举（分发最简方案）
+- **场景**：一个全新的空 U 盘，只往根目录放启动器脚本（`启动<App>.cmd` + `launch.ps1` + `sync.ps1`
+  + `restore.ps1` 等，**不含** 1.3GB 的 `WorkBuddy\` 程序与 `Data\` 数据），插到任意已装该应用的 Win10
+  电脑（安装目录可能在 C:/D:/E: 任意盘、盘符任意），双击启动脚本即可**一键生成完整便携版**。
+- **实现**：
+  - `launch.ps1` 启动前检测 U 盘根 `WorkBuddy\WorkBuddy.exe` 是否存在；不存在 → 自动调用
+    `sync.ps1 -Silent`（非交互）从本机已安装目录 `/MIR` 镜像程序到 U 盘（**首次约 1-2 分钟，之后因已存在而跳过，不重复复制**）。
+  - 对每个重定向目标目录，若 U 盘 `Data\...` 不存在则先 `New-Item` 创建（否则 junction 无目标），
+    再若本机已有真实配置目录则整树增量抢救合并进 U 盘，最后建 junction。
+- `sync.ps1` 新增 `-Silent` 开关：跳过 Y/N 确认与"按回车退出"提示，供 `launch.ps1` 自举调用；
+  手动双击 `同步安装.cmd`（不带 -Silent）仍保持交互确认，向后兼容。
+- **两种分发方式对比**：
+  - 方式 A（最简）：只拷脚本到空 U 盘 → 首次插主机**自举生成**（无需你预先搬运 1.3GB）。
+    适合"拿到任意一台装了该应用的电脑都能现场造一个便携盘"。
+  - 方式 B（立即可用）：把整个现成便携 U 盘（脚本 + `WorkBuddy\` + `Data\`）整盘拷到新空 U 盘。
+    适合"我已经有配置/技能，直接克隆带走"。
+  - 两者后续维护逻辑**完全一致**（junction 重定向 + 依赖自愈 + merge-portable 合并）。
 
 ## 7. 编码与沙箱坑（给执行 Agent）
 - `.cmd` 纯 ASCII 无 BOM；`.ps1` / `README` 用 UTF-8 BOM；`.ps1` 文件名用 ASCII（中文名在
